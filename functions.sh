@@ -33,13 +33,13 @@ function check_variables() {
     exit 1
   fi
 
-  check_variable "ADMIN_USER"
   check_variable "EXPLAIN_ANALYZE"
   check_variable "RANDOM_DISTRIBUTION"
   check_variable "MULTI_USER_COUNT"
   check_variable "GEN_DATA_SCALE"
   check_variable "SINGLE_USER_ITERATIONS"
-  check_variable "GPFDIST_LOCATION"
+  check_variable "GEN_DATA_PATH"
+  check_variable "GPFDIST_PORT"
   #00
   check_variable "RUN_COMPILE_TPCDS"
   #01
@@ -64,20 +64,8 @@ function check_variables() {
   check_variable "BENCH_ROLE"
 }
 
-function check_admin_user() {
-  echo "############################################################################"
-  echo "Ensure ${ADMIN_USER} is executing this script."
-  echo "############################################################################"
-  echo ""
-  if [ "$(whoami)" != "${ADMIN_USER}" ]; then
-    echo "Script must be executed as ${ADMIN_USER}!"
-    exit 1
-  fi
-}
-
 function print_header() {
   echo "############################################################################"
-  echo "ADMIN_USER: ${ADMIN_USER}"
   echo "MULTI_USER_COUNT: ${MULTI_USER_COUNT}"
   echo "############################################################################"
   echo ""
@@ -96,11 +84,11 @@ function source_bashrc() {
   count=$(grep -E -c "source .*/greenplum_path.sh|\. .*/greenplum_path.sh" "${startup_file}" || true)
   if [ "${count}" -eq 0 ]; then
     echo "${HOME}/.bashrc does not contain greenplum_path.sh"
-    echo "Please update your ${startup_file} for ${ADMIN_USER} and try again."
+    echo "Please update your ${startup_file} and try again."
     exit 1
   elif [ "${count}" -gt 1 ]; then
     echo "${HOME}/.bashrc contains multiple greenplum_path.sh entries"
-    echo "Please update your ${startup_file} for ${ADMIN_USER} and try again."
+    echo "Please update your ${startup_file} and try again."
     exit 1
   else
     get_version
@@ -113,41 +101,16 @@ function source_bashrc() {
 function get_pwd() {
   dirname "$(readlink -e "${1}")"
 }
-export -f get_pwd
-
-function get_gpfdist_port() {
-  all_ports=$(psql -t -A -c "select min(case when role = 'p' then port else 999999 end), min(case when role = 'm' then port else 999999 end) from gp_segment_configuration where content >= 0")
-  primary_base=$(echo "${all_ports}" | awk -F '|' '{print $1}' | head -c1)
-  mirror_base=$(echo "${all_ports}" | awk -F '|' '{print $2}' | head -c1)
-
-  for i in $(seq 4 9); do
-    if [ "${primary_base}" -ne "${i}" ] && [ "$mirror_base" -ne "${i}" ]; then
-      GPFDIST_PORT="${i}000"
-      export GPFDIST_PORT
-      break
-    fi
-  done
-}
-export -f get_gpfdist_port
+export -f get_pwd 
 
 function get_version() {
   #need to call source_bashrc first
   VERSION=$(psql -v ON_ERROR_STOP=1 -t -A -c "SELECT CASE WHEN POSITION ('Greenplum Database 4.3' IN version) > 0 THEN 'gpdb_4_3' WHEN POSITION ('Greenplum Database 5' IN version) > 0 THEN 'gpdb_5' WHEN POSITION ('Greenplum Database 6' IN version) > 0 THEN 'gpdb_6' WHEN POSITION ('Greenplum Database 7' IN version) > 0 THEN 'gpdb_7' ELSE 'postgresql' END FROM version();")
+  echo "Database flavor: ${VERSION}"
   if [[ ${VERSION} =~ "gpdb" ]]; then
-    quicklz_test=$(psql -v ON_ERROR_STOP=1 -t -A -c "SELECT COUNT(1) FROM pg_compression WHERE compname = 'quicklz'")
-    if [ "${quicklz_test}" -eq "1" ]; then
-      SMALL_STORAGE="appendonly=true, orientation=column"
-      MEDIUM_STORAGE="appendonly=true, orientation=column"
-      LARGE_STORAGE="appendonly=true, orientation=column, compresstype=quicklz"
-    else
-      SMALL_STORAGE="appendonly=true, orientation=column"
-      MEDIUM_STORAGE="appendonly=true, orientation=column"
-      LARGE_STORAGE="appendonly=true, orientation=column, compresstype=zlib, compresslevel=4"
-    fi
-  else
-    SMALL_STORAGE=""
-    MEDIUM_STORAGE=""
-    LARGE_STORAGE=""
+      SMALL_STORAGE="appendoptimized=false"
+      MEDIUM_STORAGE="appendoptimized=true, compresstype=zstd, compresslevel=1"
+      LARGE_STORAGE="orientation=column, appendoptimized=true, compresstype=zstd, compresslevel=1"
   fi
 
   export SMALL_STORAGE
@@ -167,7 +130,7 @@ function start_log() {
 }
 export -f start_log
 
-# we need to declare this outside, otherwise, the declare will wipe out the
+# we need to declare this outside, ot,herwise, the declare will wipe out the
 # value within a function
 declare schema_name
 declare table_name

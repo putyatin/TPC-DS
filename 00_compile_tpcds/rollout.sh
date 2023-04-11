@@ -22,13 +22,7 @@ function copy_tpc() {
   cp "${PWD}"/tools/dsqgen ../*_multi_user/
   cp "${PWD}"/tools/tpcds.idx ../*_gen_data/
   cp "${PWD}"/tools/tpcds.idx ../*_multi_user/
-
-  #copy the compiled dsdgen program to the segment nodes
-  echo "copy tpcds binaries to segment hosts"
-  while IFS= read -r i; do
-    scp tools/dsdgen tools/tpcds.idx "${i}": &
-  done < "${TPC_DS_DIR}"/segment_hosts.txt
-  wait
+  cp "${PWD}"/tools/dsdgen ../*_gen_data/
 }
 
 function copy_queries() {
@@ -39,7 +33,6 @@ function copy_queries() {
 }
 
 make_tpc
-create_hosts_file
 copy_tpc
 copy_queries
 print_log "1" "${schema_name}" "${table_name}" "0"

@@ -11,56 +11,21 @@ if [ "${GEN_DATA_SCALE}" == "" ]; then
 fi
 
 function get_count_generate_data() {
-  count="0"
-  while read -r i; do
-    next_count=$(ssh -o ConnectTimeout=0 -n -f "${i}" "bash -c 'ps -ef | grep generate_data.sh | grep -v grep | wc -l'" 2>&1 || true)
-    check="^[0-9]+$"
-    if ! [[ "${next_count}" =~ ${check} ]]; then
-      next_count="1"
-    fi
-    count=$((count + next_count))
-  done < "${TPC_DS_DIR}"/segment_hosts.txt
+  count=$(ps -ef | grep generate_data.sh | grep -v grep | wc -l)
 }
 
 function kill_orphaned_data_gen() {
   echo "kill any orphaned dsdgen processes on segment hosts"
   # always return true even if no processes were killed
-  while IFS= read -r i; do
-    ssh "${i}" "pkill dsdgen" || true &
-  done < "${TPC_DS_DIR}"/segment_hosts.txt
-  wait
-}
-
-function copy_generate_data() {
-  echo "copy generate_data.sh to segment hosts"
-  while IFS= read -r i; do
-    scp "${PWD}"/generate_data.sh "${i}": &
-  done < "${TPC_DS_DIR}"/segment_hosts.txt
-  wait
+  pkill dsdgen || true
 }
 
 function gen_data() {
-  get_version
-  PARALLEL=$(gpstate | grep "Total primary segments" | awk -F '=' '{print $2}')
-  if [ "${PARALLEL}" == "" ]; then
-    echo "ERROR: Unable to determine how many primary segments are in the cluster using gpstate."
-    exit 1
-  fi
   echo "parallel: $PARALLEL"
-
-  if [ "${VERSION}" == "gpdb_6" ] || [ "${VERSION}" == "gpdb_7" ]; then
-    SQL_QUERY="select row_number() over(), g.hostname, g.datadir from gp_segment_configuration g where g.content >= 0 and g.role = '${GPFDIST_LOCATION}' order by 1, 2, 3"
-  else
-    SQL_QUERY="select row_number() over(), g.hostname, p.fselocation as path from gp_segment_configuration g join pg_filespace_entry p on g.dbid = p.fsedbid join pg_tablespace t on t.spcfsoid = p.fsefsoid where g.content >= 0 and g.role = '${GPFDIST_LOCATION}' and t.spcname = 'pg_default' order by 1, 2, 3"
-  fi
-  for i in $(psql -v ON_ERROR_STOP=1 -q -A -t -c "${SQL_QUERY}"); do
-    CHILD=$(echo "${i}" | awk -F '|' '{print $1}')
-    EXT_HOST=$(echo "${i}" | awk -F '|' '{print $2}')
-    GEN_DATA_PATH=$(echo "${i}" | awk -F '|' '{print $3}')
-    GEN_DATA_PATH="${GEN_DATA_PATH}/dsbenchmark"
-    echo "ssh -n -f ${EXT_HOST} \"bash -c \'cd ~/; ./generate_data.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_PATH} &> generate_data.${CHILD}.log &\'\""
-
-    ssh -n -f "${EXT_HOST}" "bash -c 'cd ~/; ./generate_data.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_PATH} &> generate_data.${CHILD}.log &'" &
+  for i in $(seq 1 $PARALLEL); do
+    CHILD=${i}
+    echo "./generate_data.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_PATH} &> generate_data.${CHILD}.log &"
+    ./01_gen_data/generate_data.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_PATH} &> generate_data.${CHILD}.log &
   done
   wait
 }
@@ -71,7 +36,6 @@ start_log
 
 if [ "${GEN_NEW_DATA}" == "true" ]; then
   kill_orphaned_data_gen
-  copy_generate_data
   gen_data
 
   echo ""
@@ -95,7 +59,7 @@ fi
 
 echo "Generate queries based on scale"
 cd "${PWD}"
-"${PWD}"/generate_queries.sh
+# "${PWD}"/generate_queries.sh
 
 print_log "1" "tpcds" "gen_data" "0"
 

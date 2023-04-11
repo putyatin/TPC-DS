@@ -1,4 +1,4 @@
-WITH x AS (SELECT duration FROM tpcds_reports.gen_data)
+WITH x AS (SELECT duration FROM tpcds_reports.report where step='gen_data')
 SELECT 'Seconds' as time, extract('epoch' from duration) AS value
 FROM x
 UNION ALL

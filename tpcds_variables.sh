@@ -1,22 +1,20 @@
 # shellcheck disable=SC2148
 # environment options
-export ADMIN_USER="gpadmin"
-export BENCH_ROLE="dsbench"
+export BENCH_ROLE="user01"
+export GPFDIST_PORT=8080
+export GEN_DATA_PATH=/tpcds-data
+export PARALLEL=2
 
 # to connect directly to GP
 export PGPORT="5432"
-# to connect through pgbouncer
-# export PGPORT="6543"
-# Add additional PostgreSQL refer:
-# https://www.postgresql.org/docs/current/libpq-envars.html
 
 # benchmark options
-export GEN_DATA_SCALE="1"
-export MULTI_USER_COUNT="2"
+export GEN_DATA_SCALE=10
+export MULTI_USER_COUNT=2
 
 # step options
 # step 00_compile_tpcds
-export RUN_COMPILE_TPCDS="true"
+export RUN_COMPILE_TPCDS="false"
 
 # step 01_gen_data
 # To run another TPC-DS with a different BENCH_ROLE using existing tables and data
@@ -28,7 +26,8 @@ export RUN_GEN_DATA="true"
 export GEN_NEW_DATA="true"
 
 # step 02_init
-export RUN_INIT="true"
+# For Managed Greenplum should be always false
+export RUN_INIT="false"
 
 # step 03_ddl
 export RUN_DDL="true"
@@ -43,25 +42,22 @@ export RUN_SQL="true"
 export RUN_SINGLE_USER_REPORTS="true"
 
 # step 07_multi_user
-export RUN_QGEN="true"
-export RUN_MULTI_USER="true"
+export RUN_QGEN="false"
+export RUN_MULTI_USER="false"
 
 # step 08_multi_user_reports
-export RUN_MULTI_USER_REPORTS="true"
+export RUN_MULTI_USER_REPORTS="false"
 
 # step 09_score
-export RUN_SCORE="true"
+export RUN_SCORE="false"
 
 # misc options
 export SINGLE_USER_ITERATIONS="1"
 export EXPLAIN_ANALYZE="false"
 export RANDOM_DISTRIBUTION="false"
 
-# Set gpfdist location where gpfdist will run p (primary) or m (mirror)
-export GPFDIST_LOCATION="p"
 
 OSVERSION=$(uname)
 MASTER_HOST=$(hostname -s)
 export OSVERSION
 export MASTER_HOST
-export LD_PRELOAD=/lib64/libz.so.1 ps
