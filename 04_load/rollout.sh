@@ -7,6 +7,11 @@ PWD=$(get_pwd "${BASH_SOURCE[0]}")
 get_version
 filter="gpdb"
 
+#Kill any processes on gpfdist port 
+for pid in $(lsof -ti:8080); do
+  kill $pid
+done
+
 gpfdist -p "${GPFDIST_PORT}" -d "${GEN_DATA_PATH}" &> "gpfdist.${GPFDIST_PORT}.log" &
 gpfdist_pid=$!
 

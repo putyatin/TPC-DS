@@ -9,7 +9,7 @@ export PARALLEL=2
 export PGPORT="5432"
 
 # benchmark options
-export GEN_DATA_SCALE=10
+export GEN_DATA_SCALE=2
 export MULTI_USER_COUNT=2
 
 # step options
@@ -22,28 +22,28 @@ export RUN_COMPILE_TPCDS="false"
 # change BENCH_ROLE and set RUN_GEN_DATA to true and GEN_NEW_DATA to false
 # GEN_NEW_DATA only takes affect when RUN_GEN_DATA is true, and the default setting
 # should true under normal circumstances
-export RUN_GEN_DATA="true"
-export GEN_NEW_DATA="true"
+export RUN_GEN_DATA="false"
+export GEN_NEW_DATA="false"
 
 # step 02_init
 # For Managed Greenplum should be always false
 export RUN_INIT="false"
 
 # step 03_ddl
-export RUN_DDL="true"
+export RUN_DDL="false"
 
 # step 04_load
-export RUN_LOAD="true"
+export RUN_LOAD="false"
 
 # step 05_sql
-export RUN_SQL="true"
+export RUN_SQL="false"
 
 # step 06_single_user_reports
-export RUN_SINGLE_USER_REPORTS="true"
+export RUN_SINGLE_USER_REPORTS="false"
 
 # step 07_multi_user
 export RUN_QGEN="false"
-export RUN_MULTI_USER="false"
+export RUN_MULTI_USER="true"
 
 # step 08_multi_user_reports
 export RUN_MULTI_USER_REPORTS="false"

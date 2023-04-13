@@ -45,7 +45,7 @@ for i in "${PWD}"/*.ext_tpcds.*.sql; do
 
 
   # specify location of data foir exttables
-  LOCATION="'gpfdist://$(hostname):${GPFDIST_PORT}/${table_name}_[0-9]*_[0-9]*.dat'"
+  LOCATION="'gpfdist://$(hostname -f):${GPFDIST_PORT}/${table_name}_[0-9]*_[0-9]*.dat'"
 
   log_time "psql -v ON_ERROR_STOP=1 -q -a -P pager=off -f ${i} -v LOCATION=\"${LOCATION}\""
   psql -v ON_ERROR_STOP=1 -q -a -P pager=off -f "${i}" -v LOCATION="${LOCATION}"
